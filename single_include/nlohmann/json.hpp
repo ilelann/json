@@ -12881,6 +12881,27 @@ class serializer
 namespace nlohmann
 {
 
+template <
+    template <typename, typename, typename...> class ObjectType,
+    class StringType,
+    template<typename> class AllocatorType,
+    class BasicJsonType>
+struct object_traits
+{
+#if defined(JSON_HAS_CPP_14)
+    // Use transparent comparator if possible, combined with perfect forwarding
+    // on find() and count() calls prevents unnecessary string construction.
+    using object_comparator_t = std::less<>;
+#else
+    using object_comparator_t = std::less<StringType>;
+#endif
+
+    using object_t = ObjectType<StringType,
+          BasicJsonType,
+          object_comparator_t,
+          AllocatorType<std::pair<const StringType, BasicJsonType>>>;
+};
+
 /*!
 @brief a class to store JSON values
 
@@ -13186,14 +13207,6 @@ class basic_json
     /// the template arguments passed to class @ref basic_json.
     /// @{
 
-#if defined(JSON_HAS_CPP_14)
-    // Use transparent comparator if possible, combined with perfect forwarding
-    // on find() and count() calls prevents unnecessary string construction.
-    using object_comparator_t = std::less<>;
-#else
-    using object_comparator_t = std::less<StringType>;
-#endif
-
     /*!
     @brief a type for an object
 
@@ -13277,11 +13290,7 @@ class basic_json
     7159](http://rfc7159.net/rfc7159), because any order implements the
     specified "unordered" nature of JSON objects.
     */
-    using object_t = ObjectType<StringType,
-          basic_json,
-          object_comparator_t,
-          AllocatorType<std::pair<const StringType,
-          basic_json>>>;
+    using object_t = typename object_traits<ObjectType, StringType, AllocatorType, basic_json>::object_t;
 
     /*!
     @brief a type for an array
